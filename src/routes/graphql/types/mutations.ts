@@ -5,7 +5,7 @@ import {
   createProfileInputType,
   profileType,
 } from './profiles.js';
-import { createPostInputType, postType } from './posts.js';
+import { changePostInputType, createPostInputType, postType } from './posts.js';
 import { UUIDType } from './uuid.js';
 import { FastifyInstance } from 'fastify';
 
@@ -55,7 +55,10 @@ export const mutationsType = new GraphQLObjectType<
         id: { type: new GraphQLNonNull(UUIDType) },
       },
       type: new GraphQLNonNull(GraphQLString),
-      resolve: (_source, { id }, { db }) => db.user.delete({ where: { id } }),
+      resolve: async (_source, { id }, { db }) => {
+        await db.user.delete({ where: { id } });
+        return 'ok';
+      },
     },
 
     // profile
@@ -80,7 +83,10 @@ export const mutationsType = new GraphQLObjectType<
         id: { type: new GraphQLNonNull(UUIDType) },
       },
       type: new GraphQLNonNull(GraphQLString),
-      resolve: (_source, { id }, { db }) => db.profile.delete({ where: { id } }),
+      resolve: async (_source, { id }, { db }) => {
+        await db.profile.delete({ where: { id } });
+        return 'ok';
+      },
     },
 
     // post
@@ -94,7 +100,7 @@ export const mutationsType = new GraphQLObjectType<
     changePost: {
       args: {
         id: { type: new GraphQLNonNull(UUIDType) },
-        dto: { type: new GraphQLNonNull(createProfileInputType) },
+        dto: { type: new GraphQLNonNull(changePostInputType) },
       },
       type: new GraphQLNonNull(postType),
       resolve: (_source, { id, dto }, { db }) =>
@@ -105,7 +111,46 @@ export const mutationsType = new GraphQLObjectType<
         id: { type: new GraphQLNonNull(UUIDType) },
       },
       type: new GraphQLNonNull(GraphQLString),
-      resolve: (_source, { id }, { db }) => db.post.delete({ where: { id } }),
+      resolve: async (_source, { id }, { db }) => {
+        await db.post.delete({ where: { id } });
+        return 'ok';
+      },
+    },
+
+    // subscription
+    subscribeTo: {
+      args: {
+        userId: { type: new GraphQLNonNull(UUIDType) },
+        authorId: { type: new GraphQLNonNull(UUIDType) },
+      },
+      type: new GraphQLNonNull(GraphQLString),
+      resolve: async (_source, { userId, authorId }, { db }) => {
+        await db.subscribersOnAuthors.create({
+          data: {
+            subscriberId: userId,
+            authorId,
+          },
+        });
+        return 'ok';
+      },
+    },
+    unsubscribeFrom: {
+      args: {
+        userId: { type: new GraphQLNonNull(UUIDType) },
+        authorId: { type: new GraphQLNonNull(UUIDType) },
+      },
+      type: new GraphQLNonNull(GraphQLString),
+      resolve: async (_source, { userId, authorId }, { db }) => {
+        await db.subscribersOnAuthors.delete({
+          where: {
+            subscriberId_authorId: {
+              subscriberId: userId,
+              authorId,
+            },
+          },
+        });
+        return 'ok';
+      },
     },
   },
 });
