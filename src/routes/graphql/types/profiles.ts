@@ -7,7 +7,8 @@ import {
 } from 'graphql';
 import { UUIDType } from './uuid.js';
 import { memberType, memberTypeIdType } from './member-types.js';
-import { FastifyInstance } from 'fastify';
+import { TContext } from '../index.js';
+import { Profile } from '@prisma/client';
 
 /* 
 
@@ -20,10 +21,7 @@ type Profile {
 
 */
 
-export const profileType = new GraphQLObjectType<
-  { memberTypeId: string },
-  { db: FastifyInstance['prisma'] }
->({
+export const profileType = new GraphQLObjectType<Profile, TContext>({
   name: 'profile',
   fields() {
     return {
@@ -32,10 +30,8 @@ export const profileType = new GraphQLObjectType<
       yearOfBirth: { type: new GraphQLNonNull(GraphQLInt) },
       memberType: {
         type: new GraphQLNonNull(memberType),
-        resolve: ({ memberTypeId }, _args, { db }) =>
-          db.memberType.findUnique({
-            where: { id: memberTypeId },
-          }),
+        resolve: ({ memberTypeId }, _args, { loaders }) =>
+          loaders.memberTypes.load(memberTypeId),
       },
     };
   },

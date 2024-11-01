@@ -9,7 +9,8 @@ import {
 import { postType } from './posts.js';
 import { profileType } from './profiles.js';
 import { UUIDType } from './uuid.js';
-import { FastifyInstance } from 'fastify';
+import { TContext } from '../index.js';
+import { Prisma } from '@prisma/client';
 
 /* 
 
@@ -25,10 +26,14 @@ type User {
 
 */
 
-export const userType = new GraphQLObjectType<
-  { id: string },
-  { db: FastifyInstance['prisma'] }
->({
+type UserExtended = Prisma.UserGetPayload<{
+  include: {
+    userSubscribedTo: { include: { author: true } };
+    subscribedToUser: { include: { subscriber: true } };
+  };
+}>;
+
+export const userType = new GraphQLObjectType<UserExtended, TContext>({
   name: 'user',
   fields: function () {
     return {
@@ -37,42 +42,43 @@ export const userType = new GraphQLObjectType<
       balance: { type: new GraphQLNonNull(GraphQLFloat) },
       profile: {
         type: profileType,
-        resolve: ({ id }, _args, { db }) =>
-          db.profile.findUnique({ where: { userId: id } }),
+        resolve: ({ id }, _args, { loaders }) => loaders.profileByUserId.load(id),
       },
       posts: {
         type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(postType))),
-        resolve: ({ id }, _args, { db }) => db.post.findMany({ where: { authorId: id } }),
+        resolve: async ({ id }, _args, { loaders }) => loaders.postsByUserId.load(id),
       },
       userSubscribedTo: {
         type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(userType))),
-        resolve: ({ id }, _args, { db }) =>
-          db.user.findMany({
-            where: {
-              subscribedToUser: {
-                some: {
-                  subscriberId: id,
-                },
-              },
-            },
-          }),
+        resolve: async ({ id, userSubscribedTo }, _args, { loaders }) => {
+          if (userSubscribedTo) {
+            const authors = userSubscribedTo.map((o) => o.author);
+
+            return authors;
+          } else {
+            const authorsIds = (await loaders.authors.load(id)) ?? [];
+
+            return loaders.users.loadMany(authorsIds);
+          }
+        },
       },
       subscribedToUser: {
         type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(userType))),
-        resolve: ({ id }, _args, { db }) =>
-          db.user.findMany({
-            where: {
-              userSubscribedTo: {
-                some: {
-                  authorId: id,
-                },
-              },
-            },
-          }),
+        resolve: async ({ id, subscribedToUser }, _args, { loaders }) => {
+          if (subscribedToUser) {
+            const subs = subscribedToUser.map((o) => o.subscriber);
+
+            return subs;
+          } else {
+            const subsIds = (await loaders.subscribers.load(id)) ?? [];
+
+            return loaders.users.loadMany(subsIds);
+          }
+        },
       },
     };
   },
-});
+}) as GraphQLObjectType<UserExtended>;
 
 /* 
 

@@ -4,7 +4,12 @@ import { userType } from './users.js';
 import { UUIDType } from './uuid.js';
 import { postType } from './posts.js';
 import { profileType } from './profiles.js';
-import { FastifyInstance } from 'fastify';
+import { TContext } from '../index.js';
+import {
+  ResolveTree,
+  parseResolveInfo,
+  simplifyParsedResolveInfoFragmentWithType,
+} from 'graphql-parse-resolve-info';
 
 /* 
 
@@ -20,10 +25,8 @@ type RootQueryType {
 }
 
 */
-export const rootQueryType = new GraphQLObjectType<
-  unknown,
-  { db: FastifyInstance['prisma'] }
->({
+
+export const rootQueryType = new GraphQLObjectType<unknown, TContext>({
   name: 'RootQueryType',
   fields: {
     memberTypes: {
@@ -35,11 +38,46 @@ export const rootQueryType = new GraphQLObjectType<
       args: {
         id: { type: new GraphQLNonNull(memberTypeIdType) },
       },
-      resolve: (_source, { id }, { db }) => db.memberType.findUnique({ where: { id } }),
+      resolve: (_source, { id }: { id: string }, { loaders }) =>
+        loaders.memberTypes.load(id),
     },
     users: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(userType))),
-      resolve: (_source, _args, { db }) => db.user.findMany(),
+      resolve: async (_source, _args, { db, loaders }, info) => {
+        const parsedInfo = parseResolveInfo(info);
+        const { fields } = simplifyParsedResolveInfoFragmentWithType(
+          parsedInfo as ResolveTree,
+          userType,
+        );
+
+        const entries = Object.keys(fields);
+
+        const isUserSubInclude = entries.includes('userSubscribedTo');
+        const isSubToUserInclude = entries.includes('subscribedToUser');
+
+        const isExtended = isSubToUserInclude || isUserSubInclude;
+
+        const users = await db.user.findMany({
+          include: {
+            subscribedToUser: isSubToUserInclude && {
+              include: {
+                subscriber: true,
+              },
+            },
+            userSubscribedTo: isUserSubInclude && {
+              include: {
+                author: true,
+              },
+            },
+          },
+        });
+
+        if (isExtended) {
+          users.forEach((user) => loaders.users.prime(user.id, user));
+        }
+
+        return users;
+      },
     },
     user: {
       type: userType,
@@ -48,7 +86,7 @@ export const rootQueryType = new GraphQLObjectType<
           type: new GraphQLNonNull(UUIDType),
         },
       },
-      resolve: (_source, { id }, { db }) => db.user.findUnique({ where: { id } }),
+      resolve: (_source, { id }: { id: string }, { loaders }) => loaders.users.load(id),
     },
     posts: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(postType))),
@@ -61,7 +99,7 @@ export const rootQueryType = new GraphQLObjectType<
           type: new GraphQLNonNull(UUIDType),
         },
       },
-      resolve: (_source, { id }, { db }) => db.post.findUnique({ where: { id } }),
+      resolve: (_source, { id }: { id: string }, { loaders }) => loaders.posts.load(id),
     },
     profiles: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(profileType))),
@@ -83,7 +121,8 @@ export const rootQueryType = new GraphQLObjectType<
           type: new GraphQLNonNull(UUIDType),
         },
       },
-      resolve: (_source, { id }, { db }) => db.profile.findUnique({ where: { id } }),
+      resolve: (_source, { id }: { id: string }, { loaders }) =>
+        loaders.profiles.load(id),
     },
   },
 });
