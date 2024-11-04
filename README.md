@@ -1,8 +1,6 @@
 ## Assignment: Graphql
 
-## Assignment: Graphql
-
-## How to test
+### How to test
 
 1. Install dependencies:
 
