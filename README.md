@@ -1,5 +1,40 @@
 ## Assignment: Graphql
 
+## Assignment: Graphql
+
+## How to test
+
+1. Install dependencies:
+
+   `npm ci`
+
+2. Create .env file (based on .env.example): ./.env
+
+   `cp .env.example .env`
+
+3. Create db file: ./prisma/database.db
+
+   - bash: `touch prisma/database.db`
+   - pwsh: `ni prisma/database.db`
+
+4. Apply pending migrations:
+
+   `npx prisma migrate deploy`
+
+5. Seed db:
+
+   `npx prisma db seed`
+
+6. Run tests:
+
+    - `npm run test-queries`
+    - `npm run test-mutations`
+    - `npm run test-rule`  
+    - `npm run test-loader`  
+    - `npm run test-loader-prime`  
+    - `npm run test-integrity`
+
+
 ### Tasks:  
 
 1. Add logic to the graphql endpoint: ./src/routes/graphql.  
