@@ -1,12 +1,12 @@
-import { GraphQLList, GraphQLNonNull, GraphQLObjectType, GraphQLString } from 'graphql';
+import { GraphQLList, GraphQLNonNull, GraphQLObjectType } from 'graphql';
 import { memberType, memberTypeIdType } from './member-types.js';
 import { userType } from './users.js';
 import { UUIDType } from './uuid.js';
 import { postType } from './posts.js';
 import { profileType } from './profiles.js';
-import { TContext } from '../index.js';
+import type { TContext } from '../index.js';
 import {
-  ResolveTree,
+  type ResolveTree,
   parseResolveInfo,
   simplifyParsedResolveInfoFragmentWithType,
 } from 'graphql-parse-resolve-info';
@@ -114,15 +114,6 @@ export const rootQueryType = new GraphQLObjectType<unknown, TContext>({
     profiles: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(profileType))),
       resolve: (_source, _args, { db }) => db.profile.findMany(),
-    },
-    greet: {
-      type: GraphQLString,
-      args: {
-        name: {
-          type: GraphQLString,
-        },
-      },
-      resolve: (_, { name }) => `Hello! ${name}!`,
     },
     profile: {
       type: profileType,

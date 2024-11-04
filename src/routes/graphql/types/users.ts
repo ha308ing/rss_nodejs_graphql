@@ -9,8 +9,8 @@ import {
 import { postType } from './posts.js';
 import { profileType } from './profiles.js';
 import { UUIDType } from './uuid.js';
-import { TContext } from '../index.js';
-import { Prisma } from '@prisma/client';
+import type { TContext } from '../index.js';
+import type { Prisma } from '@prisma/client';
 
 /* 
 

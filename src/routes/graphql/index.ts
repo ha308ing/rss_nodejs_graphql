@@ -1,9 +1,9 @@
-import { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
+import type { FastifyPluginAsyncTypebox } from '@fastify/type-provider-typebox';
 import { createGqlResponseSchema, gqlResponseSchema, schema } from './schemas.js';
 import { graphql, validate, parse } from 'graphql';
 import depthLimit from 'graphql-depth-limit';
 import { createLoaders } from './loaders/createLoaders.js';
-import { FastifyInstance } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 
 export type TContext = {
   db: FastifyInstance['prisma'];

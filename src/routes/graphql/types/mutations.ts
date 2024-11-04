@@ -7,7 +7,8 @@ import {
 } from './profiles.js';
 import { changePostInputType, createPostInputType, postType } from './posts.js';
 import { UUIDType } from './uuid.js';
-import { FastifyInstance } from 'fastify';
+import type { Post, Profile, User } from '@prisma/client';
+import type { TContext } from '../index.js';
 
 /* 
 
@@ -27,10 +28,7 @@ type Mutations {
 
 */
 
-export const mutationsType = new GraphQLObjectType<
-  unknown,
-  { db: FastifyInstance['prisma'] }
->({
+export const mutationsType = new GraphQLObjectType<unknown, TContext>({
   name: 'Mutations',
   fields: {
     // user
@@ -39,7 +37,7 @@ export const mutationsType = new GraphQLObjectType<
         dto: { type: new GraphQLNonNull(createUserInputType) },
       },
       type: new GraphQLNonNull(userType),
-      resolve: (_source, { dto }, { db }) => db.user.create({ data: dto }),
+      resolve: (_source, { dto }: { dto: User }, { db }) => db.user.create({ data: dto }),
     },
     changeUser: {
       args: {
@@ -47,7 +45,7 @@ export const mutationsType = new GraphQLObjectType<
         dto: { type: new GraphQLNonNull(changeUserInputType) },
       },
       type: new GraphQLNonNull(userType),
-      resolve: (_source, { id, dto }, { db }) =>
+      resolve: (_source, { id, dto }: { id: string; dto: User }, { db }) =>
         db.user.update({ where: { id }, data: dto }),
     },
     deleteUser: {
@@ -55,7 +53,7 @@ export const mutationsType = new GraphQLObjectType<
         id: { type: new GraphQLNonNull(UUIDType) },
       },
       type: new GraphQLNonNull(GraphQLString),
-      resolve: async (_source, { id }, { db }) => {
+      resolve: async (_source, { id }: { id: string }, { db }) => {
         await db.user.delete({ where: { id } });
         return 'ok';
       },
@@ -67,7 +65,8 @@ export const mutationsType = new GraphQLObjectType<
         dto: { type: new GraphQLNonNull(createProfileInputType) },
       },
       type: new GraphQLNonNull(profileType),
-      resolve: (_source, { dto }, { db }) => db.profile.create({ data: dto }),
+      resolve: (_source, { dto }: { dto: Profile }, { db }) =>
+        db.profile.create({ data: dto }),
     },
     changeProfile: {
       args: {
@@ -75,7 +74,7 @@ export const mutationsType = new GraphQLObjectType<
         dto: { type: new GraphQLNonNull(changeProfileInputType) },
       },
       type: new GraphQLNonNull(profileType),
-      resolve: (_source, { id, dto }, { db }) =>
+      resolve: (_source, { id, dto }: { id: string; dto: Profile }, { db }) =>
         db.profile.update({ where: { id }, data: dto }),
     },
     deleteProfile: {
@@ -83,7 +82,7 @@ export const mutationsType = new GraphQLObjectType<
         id: { type: new GraphQLNonNull(UUIDType) },
       },
       type: new GraphQLNonNull(GraphQLString),
-      resolve: async (_source, { id }, { db }) => {
+      resolve: async (_source, { id }: { id: string }, { db }) => {
         await db.profile.delete({ where: { id } });
         return 'ok';
       },
@@ -95,7 +94,7 @@ export const mutationsType = new GraphQLObjectType<
         dto: { type: new GraphQLNonNull(createPostInputType) },
       },
       type: new GraphQLNonNull(postType),
-      resolve: (_source, { dto }, { db }) => db.post.create({ data: dto }),
+      resolve: (_source, { dto }: { dto: Post }, { db }) => db.post.create({ data: dto }),
     },
     changePost: {
       args: {
@@ -103,7 +102,7 @@ export const mutationsType = new GraphQLObjectType<
         dto: { type: new GraphQLNonNull(changePostInputType) },
       },
       type: new GraphQLNonNull(postType),
-      resolve: (_source, { id, dto }, { db }) =>
+      resolve: (_source, { id, dto }: { id: string; dto: Post }, { db }) =>
         db.post.update({ where: { id }, data: dto }),
     },
     deletePost: {
@@ -111,7 +110,7 @@ export const mutationsType = new GraphQLObjectType<
         id: { type: new GraphQLNonNull(UUIDType) },
       },
       type: new GraphQLNonNull(GraphQLString),
-      resolve: async (_source, { id }, { db }) => {
+      resolve: async (_source, { id }: { id: string }, { db }) => {
         await db.post.delete({ where: { id } });
         return 'ok';
       },
@@ -124,7 +123,11 @@ export const mutationsType = new GraphQLObjectType<
         authorId: { type: new GraphQLNonNull(UUIDType) },
       },
       type: new GraphQLNonNull(GraphQLString),
-      resolve: async (_source, { userId, authorId }, { db }) => {
+      resolve: async (
+        _source,
+        { userId, authorId }: { userId: string; authorId: string },
+        { db },
+      ) => {
         await db.subscribersOnAuthors.create({
           data: {
             subscriberId: userId,
@@ -140,7 +143,11 @@ export const mutationsType = new GraphQLObjectType<
         authorId: { type: new GraphQLNonNull(UUIDType) },
       },
       type: new GraphQLNonNull(GraphQLString),
-      resolve: async (_source, { userId, authorId }, { db }) => {
+      resolve: async (
+        _source,
+        { userId, authorId }: { userId: string; authorId: string },
+        { db },
+      ) => {
         await db.subscribersOnAuthors.delete({
           where: {
             subscriberId_authorId: {

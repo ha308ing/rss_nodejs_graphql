@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import DataLoader, { type BatchLoadFn } from 'dataloader';
 import type { MemberType, Post, Profile, User } from '@prisma/client';
-import { UserExtended } from '../types/users.js';
+import type { UserExtended } from '../types/users.js';
 
 export const createLoaders = (db: FastifyInstance['prisma']) => ({
   users: new DataLoader(userLoader(db)),

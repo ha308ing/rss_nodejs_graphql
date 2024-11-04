@@ -7,8 +7,8 @@ import {
 } from 'graphql';
 import { UUIDType } from './uuid.js';
 import { memberType, memberTypeIdType } from './member-types.js';
-import { TContext } from '../index.js';
-import { Profile } from '@prisma/client';
+import type { TContext } from '../index.js';
+import type { Profile } from '@prisma/client';
 
 /* 
 
