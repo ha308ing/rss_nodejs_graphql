@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import DataLoader, { type BatchLoadFn } from 'dataloader';
 import type { MemberType, Post, Profile, User } from '@prisma/client';
+import { UserExtended } from '../types/users.js';
 
 export const createLoaders = (db: FastifyInstance['prisma']) => ({
   users: new DataLoader(userLoader(db)),
@@ -17,7 +18,7 @@ type FnLoader<T = unknown> = (
   db: FastifyInstance['prisma'],
 ) => BatchLoadFn<string, T | undefined>;
 
-const userLoader: FnLoader<User> = (db) => async (keys) => {
+const userLoader: FnLoader<Partial<UserExtended>> = (db) => async (keys) => {
   const users = await db.user.findMany();
 
   const res = keys.map((key) => users.find(({ id }) => id == key));
@@ -78,42 +79,47 @@ const postsByUserIdLoader: FnLoader<Post[]> = (db) => async (keys) => {
   return res;
 };
 
-const authorsLoader: FnLoader<string[]> = (db) => async (keys) => {
-  const subscribers = await db.subscribersOnAuthors.findMany();
-
-  const authorsBySubscriberId = subscribers.reduce(
-    (acc: Record<string, string[]>, sub) => {
-      const subId = sub.subscriberId,
-        authId = sub.authorId;
-
-      if (acc[subId] == undefined) {
-        acc[subId] = [];
-        if (authId) acc[subId].push(authId);
-      } else {
-        if (authId) acc[subId].push(authId);
-      }
-      return acc;
+const authorsLoader: FnLoader<User[]> = (db) => async (keys) => {
+  const subscribers = await db.subscribersOnAuthors.findMany({
+    include: {
+      author: true,
     },
-    {},
-  );
+  });
+
+  const authorsBySubscriberId = subscribers.reduce((acc: Record<string, User[]>, sub) => {
+    const subId = sub.subscriberId,
+      author = sub.author;
+
+    if (acc[subId] == undefined) {
+      acc[subId] = [];
+      if (author) acc[subId].push(author);
+    } else {
+      if (author) acc[subId].push(author);
+    }
+    return acc;
+  }, {});
 
   const res = keys.map((key) => authorsBySubscriberId[key] || []);
 
   return res;
 };
 
-export const subscribersLoader: FnLoader<string[]> = (db) => async (keys) => {
-  const subscribers = await db.subscribersOnAuthors.findMany();
+export const subscribersLoader: FnLoader<User[]> = (db) => async (keys) => {
+  const subscribers = await db.subscribersOnAuthors.findMany({
+    include: {
+      subscriber: true,
+    },
+  });
 
-  const subObj = subscribers.reduce((acc: Record<string, string[]>, sub) => {
-    const subId = sub.subscriberId,
+  const subObj = subscribers.reduce((acc: Record<string, User[]>, sub) => {
+    const subscriber = sub.subscriber,
       authId = sub.authorId;
 
     if (acc[authId] == undefined) {
       acc[authId] = [];
-      if (subId) acc[authId].push(subId);
+      if (subscriber) acc[authId].push(subscriber);
     } else {
-      if (subId) acc[authId].push(subId);
+      if (subscriber) acc[authId].push(subscriber);
     }
     return acc;
   }, {});

@@ -26,12 +26,15 @@ type User {
 
 */
 
-type UserExtended = Prisma.UserGetPayload<{
+export type UserExtended = Prisma.UserGetPayload<{
   include: {
-    userSubscribedTo: { include: { author: true } };
-    subscribedToUser: { include: { subscriber: true } };
+    userSubscribedTo: true;
+    subscribedToUser: true;
   };
-}>;
+}> & {
+  subscribers?: UserExtended[];
+  authors?: UserExtended[];
+};
 
 export const userType = new GraphQLObjectType<UserExtended, TContext>({
   name: 'user',
@@ -51,29 +54,25 @@ export const userType = new GraphQLObjectType<UserExtended, TContext>({
       userSubscribedTo: {
         type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(userType))),
         resolve: async ({ id, userSubscribedTo }, _args, { loaders }) => {
-          if (userSubscribedTo) {
-            const authors = userSubscribedTo.map((o) => o.author);
-
-            return authors;
-          } else {
-            const authorsIds = (await loaders.authors.load(id)) ?? [];
-
-            return loaders.users.loadMany(authorsIds);
+          if (!userSubscribedTo) {
+            return loaders.authors.load(id);
           }
+
+          const user = await loaders.users.load(id);
+
+          return user?.authors ?? [];
         },
       },
       subscribedToUser: {
         type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(userType))),
         resolve: async ({ id, subscribedToUser }, _args, { loaders }) => {
-          if (subscribedToUser) {
-            const subs = subscribedToUser.map((o) => o.subscriber);
-
-            return subs;
-          } else {
-            const subsIds = (await loaders.subscribers.load(id)) ?? [];
-
-            return loaders.users.loadMany(subsIds);
+          if (!subscribedToUser) {
+            return loaders.subscribers.load(id);
           }
+
+          const user = await loaders.users.load(id);
+
+          return user?.subscribers ?? [];
         },
       },
     };

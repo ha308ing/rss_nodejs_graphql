@@ -43,7 +43,7 @@ export const rootQueryType = new GraphQLObjectType<unknown, TContext>({
     },
     users: {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(userType))),
-      resolve: async (_source, _args, { db, loaders }, info) => {
+      resolve: async (_source, _args, { loaders, db }, info) => {
         const parsedInfo = parseResolveInfo(info);
         const { fields } = simplifyParsedResolveInfoFragmentWithType(
           parsedInfo as ResolveTree,
@@ -55,25 +55,35 @@ export const rootQueryType = new GraphQLObjectType<unknown, TContext>({
         const isUserSubInclude = entries.includes('userSubscribedTo');
         const isSubToUserInclude = entries.includes('subscribedToUser');
 
-        const isExtended = isSubToUserInclude || isUserSubInclude;
+        const isExtended = isUserSubInclude || isSubToUserInclude;
 
         const users = await db.user.findMany({
           include: {
-            subscribedToUser: isSubToUserInclude && {
-              include: {
-                subscriber: true,
-              },
-            },
-            userSubscribedTo: isUserSubInclude && {
-              include: {
-                author: true,
-              },
-            },
+            subscribedToUser: isSubToUserInclude,
+            userSubscribedTo: isUserSubInclude,
           },
         });
 
         if (isExtended) {
-          users.forEach((user) => loaders.users.prime(user.id, user));
+          users.forEach(async (user) => {
+            const authors = user?.userSubscribedTo
+              ? user?.userSubscribedTo.map(({ authorId }) => {
+                  const authorUser = users.find(({ id }) => id === authorId);
+                  if (!authorUser) throw new Error('author user not found');
+                  return authorUser;
+                })
+              : [];
+
+            const subscribers = user?.subscribedToUser
+              ? user.subscribedToUser.map(({ subscriberId }) => {
+                  const subscriberUser = users.find(({ id }) => id === subscriberId);
+                  if (!subscriberUser) throw new Error('user not found');
+                  return subscriberUser;
+                })
+              : [];
+
+            loaders.users.prime(user.id, { ...user, subscribers, authors });
+          });
         }
 
         return users;
