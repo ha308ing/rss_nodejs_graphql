@@ -1,4 +1,10 @@
 import { Type } from '@fastify/type-provider-typebox';
+import { GraphQLSchema } from 'graphql';
+import { rootQueryType } from './types/root-query.js';
+import { mutationsType } from './types/mutations.js';
+import { postType } from './types/posts.js';
+import { profileType } from './types/profiles.js';
+import { userType } from './types/users.js';
 
 export const gqlResponseSchema = Type.Partial(
   Type.Object({
@@ -18,3 +24,9 @@ export const createGqlResponseSchema = {
     },
   ),
 };
+
+export const schema = new GraphQLSchema({
+  query: rootQueryType,
+  mutation: mutationsType,
+  types: [postType, profileType, userType],
+});
