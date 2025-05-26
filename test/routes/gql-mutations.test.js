@@ -86,7 +86,7 @@ await test('gql-mutations', async (t) => {
     const {
       body: { errors },
     } = await gqlQuery(app, {
-      // https://graphql.org/learn/queries/#multiple-fields-in-mutations
+      // https://graphql.org/learn/mutations/#multiple-fields-in-mutations
       query: `mutation ($userId: UUID!, $profileId: UUID!, $postId: UUID!) {
         deletePost(id: $postId)
         deleteProfile(id: $profileId)
